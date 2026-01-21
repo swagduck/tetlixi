@@ -128,6 +128,7 @@ const Room = () => {
     const storedName = localStorage.getItem('userName');
     if (!storedName) { navigate('/'); return; }
     setName(storedName);
+
     const newSocket = io(API_URL, { transports: ['websocket', 'polling'] });
     setSocket(newSocket);
 
@@ -141,15 +142,14 @@ const Room = () => {
 
     // LOGIC NHẬN TIN NHẮN TỪ SOCKET
     newSocket.on('user_won_lixi', (data) => {
-      // QUAN TRỌNG: Nếu là chính mình thì bỏ qua (vì đã tự thêm lúc lắc rồi)
-      if (data.userName === storedName) return;
-
+      if (data.userName === storedName) return; // Bỏ qua tin của chính mình (đã tự thêm)
       setNotifications(prev => [{ type: 'win', text: data.message }, ...prev]);
       fetchHistory(storedName);
     });
 
     newSocket.on('update_player_list', (users) => setOnlineUsers(users));
     newSocket.on('connect_error', () => setStatus('🔴 Mất kết nối!'));
+
     return () => newSocket.close();
   }, [id, navigate]);
 
@@ -158,6 +158,20 @@ const Room = () => {
       const res = await axios.get(`${API_URL}/api/lixi/history/${id}`);
       if (res.data.success) {
         const histList = res.data.data; setHistory(histList);
+
+        // --- SỬA LOGIC: NẾU LOG TRỐNG -> LẤY LỊCH SỬ ĐẮP VÀO ---
+        // Giúp khi F5 lại trang vẫn thấy danh sách người trúng
+        setNotifications(prev => {
+          if (prev.length === 0 && histList.length > 0) {
+            return histList.slice(0, 10).map(h => ({ // Lấy 10 người gần nhất
+              type: 'win',
+              text: `🏆 ${h.receiverName} đã húp ${h.amount.toLocaleString()} đ!`
+            }));
+          }
+          return prev;
+        });
+        // --------------------------------------------------------
+
         const myRecord = histList.find(h => h.receiverName === currentUserName);
         if (myRecord) setMyLixi({ amount: myRecord.amount });
       }
@@ -177,7 +191,7 @@ const Room = () => {
         setResult({ type: 'success', message: response.data.message, amount: wonAmount });
         setShowWinAnim(true); setMyLixi({ amount: wonAmount });
 
-        // --- TỰ ĐẨY THÔNG BÁO CHO MÌNH NGAY LẬP TỨC (OPTIMISTIC) ---
+        // Tự đẩy thông báo cho mình
         setNotifications(prev => [{
           type: 'win',
           text: `💰 BẠN vừa húp trọn ${wonAmount.toLocaleString("vi-VN")} đ!`
@@ -203,10 +217,10 @@ const Room = () => {
 
       {showQR && (<div className="qr-overlay" onClick={() => setShowQR(false)}><div className="qr-card" onClick={(e) => e.stopPropagation()}><h3 style={{ color: '#d2001a', margin: '0' }}>QUÉT ĐỂ VÀO</h3><img src={qrCodeUrl} alt="QR" style={{ width: '200px', margin: '15px 0', border: '2px dashed gold' }} /><p>ID: <strong>{id}</strong></p><button className="btn-tet" onClick={() => setShowQR(false)}>ĐÓNG</button></div></div>)}
 
+      {/* Overlay Kết quả (Truyền thêm onClose) */}
       {showWinAnim && result?.type === 'success' && <WinAnimationOverlay amount={result.amount} onFinished={handleAnimFinished} onClose={handleCloseWin} />}
 
       {!showWinAnim && result?.type === 'error' && (<div className="qr-overlay"><div className="qr-card"><h2>HẾT LƯỢT!</h2><p>{result.message}</p><button className="btn-tet" onClick={() => setResult(null)}>ĐÓNG</button></div></div>)}
-
       {showHistory && (<div className="qr-overlay"><div className="tet-card" style={{ maxHeight: '80vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}><h2 style={{ color: '#d2001a' }}>🏆 BẢNG PHONG THẦN</h2><div style={{ overflowY: 'auto', flex: 1, width: '100%', textAlign: 'left' }}>{history.length === 0 ? <p style={{ textAlign: 'center' }}>Trống trơn...</p> : (<table style={{ width: '100%', borderCollapse: 'collapse' }}><tbody>{history.map((h, i) => (<tr key={i} style={{ borderBottom: '1px solid #eee' }}><td style={{ padding: '10px', fontWeight: 'bold' }}>{h.receiverName}</td><td style={{ padding: '10px', textAlign: 'right', color: '#d2001a', fontWeight: 'bold' }}>{h.amount.toLocaleString()}</td></tr>))}</tbody></table>)}</div><button className="btn-tet" onClick={() => setShowHistory(false)}>ĐÓNG</button></div></div>)}
 
       <div style={{ marginTop: '40px', textAlign: 'center' }}>
@@ -217,9 +231,21 @@ const Room = () => {
 
       <div className="tet-card" style={{ marginTop: '20px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '0.9rem', color: '#555' }}><span>Chào, <strong>{name}</strong>!</span><span>👥 {onlineUsers.length}</span></div>
+
+        {/* KHUNG CHAT - Giờ sẽ luôn có dữ liệu từ lịch sử */}
         <div style={{ height: '140px', overflowY: 'auto', background: '#fff', borderRadius: '15px', padding: '10px', border: '1px solid #eee', fontSize: '0.85rem', textAlign: 'left', marginBottom: '15px', display: 'flex', flexDirection: 'column' }}>
           {notifications.length === 0 && <div style={{ textAlign: 'center', color: '#999', marginTop: '20px' }}>Chưa có ai trúng...</div>}
-          {notifications.map((n, i) => (<div key={i} style={{ padding: '8px', marginBottom: '5px', borderRadius: '8px', background: n.type === 'win' ? '#fff3cd' : 'transparent', borderLeft: n.type === 'win' ? '4px solid #d2001a' : 'none', color: n.type === 'win' ? '#d2001a' : '#333', fontWeight: n.type === 'win' ? 'bold' : 'normal' }}>{n.text}</div>))}
+          {notifications.map((n, i) => (
+            <div key={i} style={{
+              padding: '8px', marginBottom: '5px', borderRadius: '8px',
+              background: n.type === 'win' ? '#fff3cd' : 'transparent',
+              borderLeft: n.type === 'win' ? '4px solid #d2001a' : 'none',
+              color: n.type === 'win' ? '#d2001a' : '#333',
+              fontWeight: n.type === 'win' ? 'bold' : 'normal'
+            }}>
+              {n.text}
+            </div>
+          ))}
         </div>
 
         {myLixi ? (
