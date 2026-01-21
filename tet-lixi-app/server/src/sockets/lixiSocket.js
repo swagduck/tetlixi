@@ -16,24 +16,24 @@ module.exports = (io) => {
       // 1. Cho socket tham gia vào room cụ thể
       socket.join(roomId);
 
-      // 2. Lưu thông tin người dùng vào bộ nhớ server
+      // 2. Kiểm tra xem user này đã có trong phòng chưa (TRƯỚC KHI thêm)
+      const isExistingUser = Object.entries(users).some(([socketId, u]) => 
+        u.name === userName && u.roomId === roomId
+      );
+
+      // 3. Lưu thông tin người dùng vào bộ nhớ server
       users[socket.id] = { roomId, name: userName };
 
-      // 3. Lấy danh sách tất cả người trong phòng này
+      // 4. Lấy danh sách tất cả người trong phòng này
       const usersInRoom = Object.values(users).filter(
         (u) => u.roomId === roomId
       );
 
-      // 4. Gửi danh sách mới nhất cho TẤT CẢ mọi người trong phòng
+      // 5. Gửi danh sách mới nhất cho TẤT CẢ mọi người trong phòng
       // (Để frontend cập nhật số lượng 👥 và danh sách tên)
       io.to(roomId).emit("update_player_list", usersInRoom);
 
-      // 5. Chỉ thông báo cho người khác nếu đây là người dùng MỚI
-      // Kiểm tra xem user này đã có trong phòng chưa (dựa trên tên)
-      const isExistingUser = Object.entries(users).some(([socketId, u]) => 
-        u.name === userName && u.roomId === roomId && socketId !== socket.id
-      );
-      
+      // 6. Chỉ thông báo cho người khác nếu đây là người dùng MỚI
       if (!isExistingUser) {
         socket.to(roomId).emit("user_joined", {
           message: `${userName} vừa tham gia cuộc chiến!`,
