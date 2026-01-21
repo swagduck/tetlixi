@@ -69,6 +69,14 @@ const Admin = () => {
     } catch (error) { alert("Lỗi: " + error.message); }
   };
 
+  // Hàm copy nhanh ID khi bấm vào
+  const copyId = () => {
+    if (createdRoomId) {
+      navigator.clipboard.writeText(createdRoomId);
+      alert("Đã copy ID phòng!");
+    }
+  }
+
   return (
     <div className="main-container">
       <FallingBlossoms />
@@ -87,7 +95,32 @@ const Admin = () => {
         <input className="tet-input" type="number" placeholder="Tổng tiền (VD: 500k)" value={roomConfig.totalAmount} onChange={(e) => setRoomConfig({ ...roomConfig, totalAmount: e.target.value })} />
         <input className="tet-input" type="number" placeholder="Số người (VD: 10)" value={roomConfig.quantity} onChange={(e) => setRoomConfig({ ...roomConfig, quantity: e.target.value })} />
         <button className="btn-tet" onClick={handleCreateRoom}>TẠO PHÒNG</button>
-        {createdRoomId && (<div style={{ marginTop: '20px', padding: '15px', background: '#e8f5e9', borderRadius: '15px', border: '2px solid #4caf50' }}><p style={{ color: '#2e7d32', fontWeight: 'bold', margin: '0' }}>✅ ID Phòng:</p><div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#333', padding: '10px' }}>{createdRoomId}</div></div>)}
+
+        {/* --- KHUNG HIỂN THỊ ID (ĐÃ SỬA LỖI TRÀN) --- */}
+        {createdRoomId && (
+          <div onClick={copyId} style={{
+            marginTop: '20px',
+            padding: '15px',
+            background: '#e8f5e9',
+            borderRadius: '15px',
+            border: '2px dashed #4caf50',
+            cursor: 'pointer',
+            transition: '0.2s'
+          }}>
+            <p style={{ color: '#2e7d32', fontWeight: 'bold', margin: '0', fontSize: '0.9rem' }}>✅ ID Phòng (Chạm để Copy):</p>
+            <div style={{
+              fontSize: '1.5rem', // Giảm size chữ xuống cho đỡ tràn
+              fontWeight: 'bold',
+              color: '#333',
+              padding: '10px 0',
+              wordBreak: 'break-all', // QUAN TRỌNG: Tự xuống dòng nếu ID quá dài
+              lineHeight: '1.2'
+            }}>
+              {createdRoomId}
+            </div>
+          </div>
+        )}
+        {/* ------------------------------------------- */}
       </div>
     </div>
   );
@@ -128,7 +161,6 @@ const Room = () => {
     const storedName = localStorage.getItem('userName');
     if (!storedName) { navigate('/'); return; }
     setName(storedName);
-
     const newSocket = io(API_URL, { transports: ['websocket', 'polling'] });
     setSocket(newSocket);
 
@@ -140,9 +172,8 @@ const Room = () => {
 
     newSocket.on('user_joined', (data) => setNotifications(prev => [{ type: 'info', text: `🦄 ${data.message}` }, ...prev]));
 
-    // LOGIC NHẬN TIN NHẮN TỪ SOCKET
     newSocket.on('user_won_lixi', (data) => {
-      if (data.userName === storedName) return; // Bỏ qua tin của chính mình (đã tự thêm)
+      if (data.userName === storedName) return;
       setNotifications(prev => [{ type: 'win', text: data.message }, ...prev]);
       fetchHistory(storedName);
     });
@@ -159,18 +190,15 @@ const Room = () => {
       if (res.data.success) {
         const histList = res.data.data; setHistory(histList);
 
-        // --- SỬA LOGIC: NẾU LOG TRỐNG -> LẤY LỊCH SỬ ĐẮP VÀO ---
-        // Giúp khi F5 lại trang vẫn thấy danh sách người trúng
         setNotifications(prev => {
           if (prev.length === 0 && histList.length > 0) {
-            return histList.slice(0, 10).map(h => ({ // Lấy 10 người gần nhất
+            return histList.slice(0, 10).map(h => ({
               type: 'win',
               text: `🏆 ${h.receiverName} đã húp ${h.amount.toLocaleString()} đ!`
             }));
           }
           return prev;
         });
-        // --------------------------------------------------------
 
         const myRecord = histList.find(h => h.receiverName === currentUserName);
         if (myRecord) setMyLixi({ amount: myRecord.amount });
@@ -190,12 +218,7 @@ const Room = () => {
         const wonAmount = response.data.amount;
         setResult({ type: 'success', message: response.data.message, amount: wonAmount });
         setShowWinAnim(true); setMyLixi({ amount: wonAmount });
-
-        // Tự đẩy thông báo cho mình
-        setNotifications(prev => [{
-          type: 'win',
-          text: `💰 BẠN vừa húp trọn ${wonAmount.toLocaleString("vi-VN")} đ!`
-        }, ...prev]);
+        setNotifications(prev => [{ type: 'win', text: `💰 BẠN vừa húp trọn ${wonAmount.toLocaleString("vi-VN")} đ!` }, ...prev]);
       }
     } catch (error) {
       const msg = error.response?.data?.message || "Lỗi mạng!";
@@ -217,7 +240,6 @@ const Room = () => {
 
       {showQR && (<div className="qr-overlay" onClick={() => setShowQR(false)}><div className="qr-card" onClick={(e) => e.stopPropagation()}><h3 style={{ color: '#d2001a', margin: '0' }}>QUÉT ĐỂ VÀO</h3><img src={qrCodeUrl} alt="QR" style={{ width: '200px', margin: '15px 0', border: '2px dashed gold' }} /><p>ID: <strong>{id}</strong></p><button className="btn-tet" onClick={() => setShowQR(false)}>ĐÓNG</button></div></div>)}
 
-      {/* Overlay Kết quả (Truyền thêm onClose) */}
       {showWinAnim && result?.type === 'success' && <WinAnimationOverlay amount={result.amount} onFinished={handleAnimFinished} onClose={handleCloseWin} />}
 
       {!showWinAnim && result?.type === 'error' && (<div className="qr-overlay"><div className="qr-card"><h2>HẾT LƯỢT!</h2><p>{result.message}</p><button className="btn-tet" onClick={() => setResult(null)}>ĐÓNG</button></div></div>)}
@@ -231,21 +253,9 @@ const Room = () => {
 
       <div className="tet-card" style={{ marginTop: '20px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '0.9rem', color: '#555' }}><span>Chào, <strong>{name}</strong>!</span><span>👥 {onlineUsers.length}</span></div>
-
-        {/* KHUNG CHAT - Giờ sẽ luôn có dữ liệu từ lịch sử */}
         <div style={{ height: '140px', overflowY: 'auto', background: '#fff', borderRadius: '15px', padding: '10px', border: '1px solid #eee', fontSize: '0.85rem', textAlign: 'left', marginBottom: '15px', display: 'flex', flexDirection: 'column' }}>
           {notifications.length === 0 && <div style={{ textAlign: 'center', color: '#999', marginTop: '20px' }}>Chưa có ai trúng...</div>}
-          {notifications.map((n, i) => (
-            <div key={i} style={{
-              padding: '8px', marginBottom: '5px', borderRadius: '8px',
-              background: n.type === 'win' ? '#fff3cd' : 'transparent',
-              borderLeft: n.type === 'win' ? '4px solid #d2001a' : 'none',
-              color: n.type === 'win' ? '#d2001a' : '#333',
-              fontWeight: n.type === 'win' ? 'bold' : 'normal'
-            }}>
-              {n.text}
-            </div>
-          ))}
+          {notifications.map((n, i) => (<div key={i} style={{ padding: '8px', marginBottom: '5px', borderRadius: '8px', background: n.type === 'win' ? '#fff3cd' : 'transparent', borderLeft: n.type === 'win' ? '4px solid #d2001a' : 'none', color: n.type === 'win' ? '#d2001a' : '#333', fontWeight: n.type === 'win' ? 'bold' : 'normal' }}>{n.text}</div>))}
         </div>
 
         {myLixi ? (
