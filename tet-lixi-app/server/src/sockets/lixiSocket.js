@@ -28,10 +28,17 @@ module.exports = (io) => {
       // (Để frontend cập nhật số lượng 👥 và danh sách tên)
       io.to(roomId).emit("update_player_list", usersInRoom);
 
-      // 5. Thông báo cho người khác biết có người mới vào
-      socket.to(roomId).emit("user_joined", {
-        message: `${userName} vừa tham gia cuộc chiến!`,
-      });
+      // 5. Chỉ thông báo cho người khác nếu đây là người dùng MỚI
+      // Kiểm tra xem user này đã có trong phòng chưa (dựa trên tên)
+      const isExistingUser = Object.entries(users).some(([socketId, u]) => 
+        u.name === userName && u.roomId === roomId && socketId !== socket.id
+      );
+      
+      if (!isExistingUser) {
+        socket.to(roomId).emit("user_joined", {
+          message: `${userName} vừa tham gia cuộc chiến!`,
+        });
+      }
 
       console.log(
         `✅ ${userName} đã vào phòng ${roomId}. Tổng: ${usersInRoom.length} người`,
