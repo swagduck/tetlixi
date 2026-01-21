@@ -62,14 +62,16 @@ exports.openEnvelope = async (req, res) => {
       message = "Ấm no rồi! Chúc mừng đại gia! 💰";
     }
 
-    // --- PHÁT LOA SOCKET ---
+    // --- PHÁT LOA SOCKET (DELAY ĐỂ WINNER THẤY KẾT QUẢ TRƯỚC) ---
     if (req.io) {
       console.log(`📡 Đang phát loa tới phòng ${envelopeId} cho ${receiverName}`);
-      req.io.to(envelopeId).emit("user_won_lixi", {
-        userName: receiverName,
-        amount: amount,
-        message: `💰 ${receiverName} vừa húp trọn ${amount.toLocaleString("vi-VN")} đ!`,
-      });
+      setTimeout(() => {
+        req.io.to(envelopeId).emit("user_won_lixi", {
+          userName: receiverName,
+          amount: amount,
+          message: `💰 ${receiverName} vừa húp trọn ${amount.toLocaleString("vi-VN")} đ!`,
+        });
+      }, 1500); // Delay 1.5s để winner thấy animation trước
     } else {
       console.error("❌ LỖI: Không tìm thấy req.io trong Controller!");
     }

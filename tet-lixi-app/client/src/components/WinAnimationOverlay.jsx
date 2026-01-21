@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import '../index.css';
 
-const WinAnimationOverlay = ({ amount, message, onFinished }) => {
+const WinAnimationOverlay = ({ amount, message, onFinished, onClose }) => {
   const [phase, setPhase] = useState('running'); // 'running' | 'flash' | 'result'
   const [displayAmount, setDisplayAmount] = useState(0);
 
@@ -87,7 +87,7 @@ const WinAnimationOverlay = ({ amount, message, onFinished }) => {
             </div>
             {/* --------------------------------------- */}
 
-            <button className="btn-tet" style={{ marginTop: '15px', width: 'auto', padding: '10px 40px', fontSize: '1.1rem' }} onClick={() => window.location.reload()}>
+            <button className="btn-tet" style={{ marginTop: '15px', width: 'auto', padding: '10px 40px', fontSize: '1.1rem' }} onClick={onClose}>
               HỐT BẠC 💰
             </button>
           </div>
