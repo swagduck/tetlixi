@@ -46,6 +46,22 @@ exports.openEnvelope = async (req, res) => {
     const transaction = new Transaction({ envelopeId, receiverName, amount });
     await transaction.save();
 
+    // Logic chọn câu "khịa"
+    let message = "Chúc mừng năm mới!";
+    if (amount <= 5000) {
+      const trolls = [
+        "Của ít lòng nhiều nha!",
+        "Đen thôi, đỏ quên đi!",
+        "Năm sau nhớ ăn ở tốt hơn nhé!",
+        "Tiền không quan trọng, tình cảm là chính 🤣"
+      ];
+      message = trolls[Math.floor(Math.random() * trolls.length)];
+    } else if (amount >= 500000) {
+      message = "QUÁ DỮ! Bao cả nhà đi thôi! 🚀";
+    } else if (amount >= 100000) {
+      message = "Ấm no rồi! Chúc mừng đại gia! 💰";
+    }
+
     // --- PHÁT LOA SOCKET ---
     if (req.io) {
       console.log(`📡 Đang phát loa tới phòng ${envelopeId} cho ${receiverName}`);
@@ -58,7 +74,7 @@ exports.openEnvelope = async (req, res) => {
       console.error("❌ LỖI: Không tìm thấy req.io trong Controller!");
     }
 
-    res.json({ success: true, amount, message: "Lộc về!" });
+    res.json({ success: true, amount, message });
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, message: error.message });

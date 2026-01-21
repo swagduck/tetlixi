@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import '../index.css';
 
-const WinAnimationOverlay = ({ amount, onFinished }) => {
+const WinAnimationOverlay = ({ amount, message, onFinished }) => {
   const [phase, setPhase] = useState('running'); // 'running' | 'flash' | 'result'
   const [displayAmount, setDisplayAmount] = useState(0);
 
@@ -74,6 +74,18 @@ const WinAnimationOverlay = ({ amount, onFinished }) => {
               {displayAmount.toLocaleString('vi-VN')}
               <span style={{ fontSize: '2rem', verticalAlign: 'top', marginLeft: '5px' }}>đ</span>
             </div>
+
+            {/* --- THÊM ĐOẠN NÀY: Hiển thị lời nhắn --- */}
+            <div style={{
+              marginTop: '10px',
+              color: '#333',
+              fontSize: '1.2rem',
+              fontStyle: 'italic',
+              padding: '0 20px'
+            }}>
+              "{message}"
+            </div>
+            {/* --------------------------------------- */}
 
             <button className="btn-tet" style={{ marginTop: '15px', width: 'auto', padding: '10px 40px', fontSize: '1.1rem' }} onClick={() => window.location.reload()}>
               HỐT BẠC 💰

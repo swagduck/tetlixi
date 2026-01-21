@@ -1,7 +1,10 @@
 // server/src/utils/rng.js
 
-// Danh sách mệnh giá "Chẵn" (Bạn có thể thêm bớt tùy ý)
-const DENOMINATIONS = [20000, 50000, 100000, 200000, 500000];
+// 1. Thêm mệnh giá nhỏ để "troll" và mệnh giá lẻ cho vui
+const DENOMINATIONS = [
+  1000, 2000, 5000, 10000, // Mệnh giá "troll"
+  20000, 50000, 100000, 200000, 500000 // Mệnh giá "ấm no"
+];
 
 /**
  * Chọn ngẫu nhiên một mệnh giá đẹp
@@ -12,12 +15,9 @@ const calculateRandomAmount = (remainingAmount, remainingQuantity) => {
     return remainingAmount;
   }
 
-  // 2. Lọc ra các mệnh giá hợp lệ
-  // (Mệnh giá phải nhỏ hơn hoặc bằng số tiền còn lại)
-  // Và quan trọng: Phải chừa lại ít nhất 20k (min) cho những người sau
-  // Ví dụ: Còn 100k, còn 2 người. Không được random ra 100k, vì người sau sẽ còn 0đ.
-
-  const minReserve = (remainingQuantity - 1) * 20000; // Tiền tối thiểu cần chừa
+  // 2. GIẢM mức dự trữ tối thiểu xuống thấp nhất (1k)
+  // Để người đi trước có thể "hốt" gần hết tiền, chỉ chừa lại 1k cho người sau -> Tạo drama!
+  const minReserve = (remainingQuantity - 1) * 1000;
   const maxAffordable = remainingAmount - minReserve;
 
   const validDenominations = DENOMINATIONS.filter((d) => d <= maxAffordable);
