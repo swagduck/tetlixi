@@ -1,79 +1,86 @@
 // client/src/components/WinAnimationOverlay.jsx
-import React, { useEffect, useState, useRef } from 'react';
-
-const MESSAGES = [
-  "Thần tài đang soi...",
-  "Đang mở két sắt...",
-  "Xin keo 500 anh em...",
-  "Tiền đang về bản...",
-  "Nhân phẩm bùng nổ?!",
-  "Chờ xíu..."
-];
+import React, { useEffect, useState } from 'react';
+import '../index.css';
 
 const WinAnimationOverlay = ({ amount, onFinished }) => {
+  const [phase, setPhase] = useState('running'); // 'running' | 'flash' | 'result'
   const [displayAmount, setDisplayAmount] = useState(0);
-  const [message, setMessage] = useState("Đang kết nối...");
-  
-  // Logic chạy số (Rolling Counter)
-  useEffect(() => {
-    let startTimestamp = null;
-    const duration = 3000; // Số chạy trong 3 giây
-    
-    const step = (timestamp) => {
-      if (!startTimestamp) startTimestamp = timestamp;
-      const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-      
-      // Hàm easing (làm cho số chạy nhanh lúc đầu, chậm dần lúc cuối để hồi hộp)
-      // easeOutCubic: 1 - pow(1 - x, 3)
-      const easeProgress = 1 - Math.pow(1 - progress, 3);
-      
-      const currentVal = Math.floor(easeProgress * amount);
-      setDisplayAmount(currentVal);
 
-      if (progress < 1) {
-        window.requestAnimationFrame(step);
-      } else {
-        // Khi chạy xong số
-        setTimeout(() => {
-            onFinished(); // Kết thúc overlay
-        }, 800); // Dừng lại 0.8s để ngắm số đẹp trước khi tắt
-      }
-    };
-    
-    window.requestAnimationFrame(step);
-  }, [amount, onFinished]);
-
-  // Logic đổi câu thông báo liên tục
   useEffect(() => {
-    const interval = setInterval(() => {
-      const randomMsg = MESSAGES[Math.floor(Math.random() * MESSAGES.length)];
-      setMessage(randomMsg);
-    }, 600); // Đổi chữ mỗi 0.6s
-    return () => clearInterval(interval);
-  }, []);
+    // 1. Chạy ngựa (1.8s)
+    const runTimer = setTimeout(() => {
+      setPhase('flash');
+    }, 1800);
+
+    // 2. Hiện kết quả (1.9s)
+    const resultTimer = setTimeout(() => {
+      setPhase('result');
+      if (onFinished) onFinished();
+
+      // Animation chạy số
+      let startTimestamp = null;
+      const duration = 2500;
+
+      const step = (timestamp) => {
+        if (!startTimestamp) startTimestamp = timestamp;
+        const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+        const easeProgress = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
+
+        setDisplayAmount(Math.floor(easeProgress * (amount || 0))); // Fix NaN nếu amount null
+
+        if (progress < 1) {
+          window.requestAnimationFrame(step);
+        }
+      };
+
+      window.requestAnimationFrame(step);
+
+    }, 1900);
+
+    return () => { clearTimeout(runTimer); clearTimeout(resultTimer); };
+  }, [onFinished, amount]);
 
   return (
-    <div className="win-overlay">
-      {/* Hiệu ứng hạt bụi/sao bay (tạo tốc độ) */}
-      <div style={{position: 'absolute', width: '100%', height:'100%', opacity: 0.3, background: 'url("https://media.giphy.com/media/l0HlTy9x8FZo0XO1i/giphy.gif")', backgroundSize: 'cover', pointerEvents: 'none'}}></div>
+    <div className="win-overlay-container">
 
-      {/* Dòng chữ gây hồi hộp */}
-      <div className="suspense-text">{message}</div>
+      {phase === 'running' && (
+        <>
+          <div className="speed-lines"></div>
+          <div className="horse-track">
+            <div className="super-horse">🐎</div>
+            <div className="dust-particle" style={{ left: '20%', animationDelay: '0s' }}></div>
+            <div className="dust-particle" style={{ left: '30%', animationDelay: '0.2s' }}></div>
+            <div className="dust-particle" style={{ left: '40%', animationDelay: '0.4s' }}></div>
+            <div style={{ position: 'absolute', bottom: '20%', width: '100%', textAlign: 'center', color: '#FFD700', fontSize: '1.5rem', fontWeight: 'bold', letterSpacing: '3px', textShadow: '0 0 10px #D2001A', zIndex: 6, fontFamily: 'Montserrat' }}>
+              THẦN TỐC HÁI LỘC... ⚡
+            </div>
+          </div>
+        </>
+      )}
 
-      {/* SỐ TIỀN ĐANG CHẠY */}
-      <div className="rolling-number">
-        {displayAmount.toLocaleString('vi-VN')}
-      </div>
+      {phase === 'flash' && <div className="flash-bang"></div>}
 
-      {/* Con ngựa chạy qua */}
-      <div className="running-horse">
-        🐎💨
-      </div>
-      
-      {/* Footer */}
-      <p style={{color: '#666', marginTop: '50px', fontSize: '0.9rem'}}>
-        Hệ thống đang chuyển tiền...
-      </p>
+      {phase === 'result' && (
+        <>
+          <div className="sun-rays"></div>
+          <div className="result-box">
+            <div style={{ fontSize: '5rem', marginBottom: '-20px', filter: 'drop-shadow(0 5px 5px rgba(0,0,0,0.3))' }}>🧧</div>
+            <h2 style={{ color: '#D2001A', margin: '5px 0', fontSize: '1.5rem', textTransform: 'uppercase', fontFamily: 'Montserrat', fontWeight: 800 }}>
+              Lộc Về Đầy Túi!
+            </h2>
+
+            {/* SỐ TIỀN NHẢY - ĐÃ FIX MÀU SẮC */}
+            <div className="result-money" style={{ fontVariantNumeric: 'tabular-nums', color: '#D2001A', textShadow: '2px 2px 0px #FFF' }}>
+              {displayAmount.toLocaleString('vi-VN')}
+              <span style={{ fontSize: '2rem', verticalAlign: 'top', marginLeft: '5px' }}>đ</span>
+            </div>
+
+            <button className="btn-tet" style={{ marginTop: '15px', width: 'auto', padding: '10px 40px', fontSize: '1.1rem' }} onClick={() => window.location.reload()}>
+              HỐT BẠC 💰
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 };
