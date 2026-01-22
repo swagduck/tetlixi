@@ -142,6 +142,7 @@ const Room = () => {
   const [showHistory, setShowHistory] = useState(false);
   const [myLixi, setMyLixi] = useState(null);
   const [showQR, setShowQR] = useState(false);
+  const [roomInfo, setRoomInfo] = useState(null);
 
   const navigate = useNavigate();
   const bgmRef = useRef(new Audio(AUDIO_URLS.bgm));
@@ -167,7 +168,8 @@ const Room = () => {
     newSocket.on('connect', () => {
       setStatus('🟢 Sẵn sàng!');
       newSocket.emit('join_room', { roomId: id, userName: storedName });
-      fetchHistory(storedName);
+      loadInitialNotifications(storedName);
+      loadRoomInfo();
     });
 
     newSocket.on('user_joined', (data) => setNotifications(prev => [{ type: 'info', text: `🦄 ${data.message}` }, ...prev]));
@@ -176,6 +178,7 @@ const Room = () => {
       if (data.userName === storedName) return;
       setNotifications(prev => [{ type: 'win', text: data.message }, ...prev]);
       fetchHistory(storedName);
+      loadRoomInfo(); // Cập nhật lại thông tin phòng khi có người nhận lì xì
     });
 
     newSocket.on('update_player_list', (users) => setOnlineUsers(users));
@@ -184,21 +187,44 @@ const Room = () => {
     return () => newSocket.close();
   }, [id, navigate]);
 
+  const loadRoomInfo = async () => {
+    try {
+      console.log('🔍 Loading room info for:', id);
+      const res = await axios.get(`${API_URL}/api/lixi/info/${id}`);
+      console.log('📊 Room info response:', res.data);
+      if (res.data.success) {
+        setRoomInfo(res.data.data);
+      }
+    } catch (err) {
+      console.error('❌ Error loading room info:', err);
+    }
+  };
+
+  const loadInitialNotifications = async (currentUserName) => {
+    try {
+      const res = await axios.get(`${API_URL}/api/lixi/history/${id}`);
+      if (res.data.success) {
+        const histList = res.data.data; setHistory(histList);
+
+        // Chỉ load notifications ban đầu khi mới vào phòng
+        setNotifications(histList.slice(0, 10).map(h => ({
+          type: 'win',
+          text: `🏆 ${h.receiverName} đã húp ${h.amount.toLocaleString()} đ!`
+        })));
+
+        const myRecord = histList.find(h => h.receiverName === currentUserName);
+        if (myRecord) setMyLixi({ amount: myRecord.amount });
+      }
+    } catch (err) { console.error(err); }
+  };
+
   const fetchHistory = async (currentUserName) => {
     try {
       const res = await axios.get(`${API_URL}/api/lixi/history/${id}`);
       if (res.data.success) {
         const histList = res.data.data; setHistory(histList);
 
-        setNotifications(prev => {
-          if (prev.length === 0 && histList.length > 0) {
-            return histList.slice(0, 10).map(h => ({
-              type: 'win',
-              text: `🏆 ${h.receiverName} đã húp ${h.amount.toLocaleString()} đ!`
-            }));
-          }
-          return prev;
-        });
+        // Không tự động thêm notifications từ history vì đã có socket events
 
         const myRecord = histList.find(h => h.receiverName === currentUserName);
         if (myRecord) setMyLixi({ amount: myRecord.amount });
@@ -219,6 +245,7 @@ const Room = () => {
         setResult({ type: 'success', message: response.data.message, amount: wonAmount });
         setShowWinAnim(true); setMyLixi({ amount: wonAmount });
         setNotifications(prev => [{ type: 'win', text: `💰 BẠN vừa húp trọn ${wonAmount.toLocaleString("vi-VN")} đ!` }, ...prev]);
+        loadRoomInfo(); // Cập nhật lại thông tin phòng sau khi nhận
       }
     } catch (error) {
       const msg = error.response?.data?.message || "Lỗi mạng!";
@@ -252,7 +279,44 @@ const Room = () => {
       </div>
 
       <div className="tet-card" style={{ marginTop: '20px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '0.9rem', color: '#555' }}><span>Chào, <strong>{name}</strong>!</span><span>👥 {onlineUsers.length}</span></div>
+        {/* Thông tin phòng */}
+        {roomInfo && (
+          <div style={{
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            color: '#fff',
+            padding: '15px',
+            borderRadius: '15px',
+            marginBottom: '15px',
+            textAlign: 'center'
+          }}>
+            <div style={{ fontSize: '0.9rem', opacity: 0.9 }}>💰 QUỸ CÒN LẠI</div>
+            <div style={{ fontSize: '1.8rem', fontWeight: 'bold', margin: '5px 0' }}>
+              {roomInfo.remainingAmount.toLocaleString('vi-VN')} đ
+            </div>
+            <div style={{ fontSize: '0.8rem', opacity: 0.8 }}>
+              📦 {roomInfo.remainingQuantity}/{roomInfo.quantity} bao còn lại
+            </div>
+          </div>
+        )}
+
+        {/* Debug: Hiển thị roomInfo để kiểm tra */}
+        {process.env.NODE_ENV === 'development' && (
+          <div style={{
+            background: '#f0f0f0',
+            padding: '10px',
+            borderRadius: '5px',
+            marginBottom: '10px',
+            fontSize: '0.8rem',
+            color: '#333'
+          }}>
+            Debug roomInfo: {JSON.stringify(roomInfo, null, 2)}
+          </div>
+        )}
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '0.9rem', color: '#555' }}>
+          <span>Chào, <strong>{name}</strong>!</span>
+          <span>👥 {onlineUsers.length}</span>
+        </div>
         <div style={{ height: '140px', overflowY: 'auto', background: '#fff', borderRadius: '15px', padding: '10px', border: '1px solid #eee', fontSize: '0.85rem', textAlign: 'left', marginBottom: '15px', display: 'flex', flexDirection: 'column' }}>
           {notifications.length === 0 && <div style={{ textAlign: 'center', color: '#999', marginTop: '20px' }}>Chưa có ai trúng...</div>}
           {notifications.map((n, i) => (<div key={i} style={{ padding: '8px', marginBottom: '5px', borderRadius: '8px', background: n.type === 'win' ? '#fff3cd' : 'transparent', borderLeft: n.type === 'win' ? '4px solid #d2001a' : 'none', color: n.type === 'win' ? '#d2001a' : '#333', fontWeight: n.type === 'win' ? 'bold' : 'normal' }}>{n.text}</div>))}

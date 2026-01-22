@@ -10,11 +10,9 @@ const DENOMINATIONS = [
  * Chọn ngẫu nhiên một mệnh giá đẹp
  */
 const calculateRandomAmount = (remainingAmount, remainingQuantity) => {
-  // 1. NGƯỜI CUỐI CÙNG: Hốt trọn số tiền còn lại (để không bị sót tiền quỹ)
-  if (remainingQuantity === 1) {
-    return remainingAmount;
-  }
-
+  // 1. Tính toán mệnh giá hợp lệ dựa trên số tiền và số lượng còn lại
+  // Không còn ưu tiên người cuối cùng hốt hết tiền
+  
   // 2. GIẢM mức dự trữ tối thiểu xuống thấp nhất (1k)
   // Để người đi trước có thể "hốt" gần hết tiền, chỉ chừa lại 1k cho người sau -> Tạo drama!
   const minReserve = (remainingQuantity - 1) * 1000;

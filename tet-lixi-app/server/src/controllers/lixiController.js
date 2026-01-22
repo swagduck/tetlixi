@@ -83,6 +83,28 @@ exports.openEnvelope = async (req, res) => {
   }
 };
 
+exports.getEnvelopeInfo = async (req, res) => {
+  try {
+    const { envelopeId } = req.params;
+    
+    const envelope = await Envelope.findById(envelopeId);
+    if (!envelope) return res.status(404).json({ message: "Không tìm thấy phòng!" });
+
+    const history = await Transaction.find({ envelopeId });
+    
+    res.json({ 
+      success: true, 
+      data: {
+        ...envelope.toObject(),
+        totalReceived: history.length,
+        totalAmountReceived: history.reduce((sum, trans) => sum + trans.amount, 0)
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 exports.getHistory = async (req, res) => {
   try {
     const { envelopeId } = req.params;

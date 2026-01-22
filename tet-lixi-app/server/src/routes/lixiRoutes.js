@@ -11,7 +11,11 @@ router.post("/create", lixiController.createEnvelope);
 // POST http://localhost:5000/api/lixi/open
 router.post("/open", lixiController.openEnvelope);
 
-// 3. Xem lịch sử/Bảng xếp hạng (User + Realtime update sau này)
+// 3. Lấy thông tin chi tiết phòng
+// GET http://localhost:5000/api/lixi/info/:envelopeId
+router.get("/info/:envelopeId", lixiController.getEnvelopeInfo);
+
+// 4. Xem lịch sử/Bảng xếp hạng (User + Realtime update sau này)
 // GET http://localhost:5000/api/lixi/history/:envelopeId
 router.get("/history/:envelopeId", lixiController.getHistory);
 
